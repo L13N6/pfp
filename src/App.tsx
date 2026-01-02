@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { sdk } from '@farcaster/miniapp-sdk';
-import { keccak256, toUtf8Bytes } from 'viem';
+import { keccak256, stringToBytes } from 'viem';
+import { utf8 } from 'viem/encoding';
 
 function App() {
   const [fid, setFid] = useState<number | null>(null);
@@ -9,14 +10,17 @@ function App() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    // Hide loading splash
     sdk.actions.ready();
-    sdk.auth.getUser()
-      .then(user => {
-        setFid(user.fid);
-        const hash = keccak256(toUtf8Bytes(user.fid.toString()));
-        setDna(hash);
-      })
-      .catch(err => console.error('Auth error:', err));
+
+    // Get user from context (current SDK method)
+    if (sdk.context.user?.fid) {
+      const userFid = sdk.context.user.fid;
+      setFid(userFid);
+      const bytes = stringToBytes(utf8(userFid.toString()));
+      const hash = keccak256(bytes);
+      setDna(hash);
+    }
   }, []);
 
   const generatePfp = async () => {
@@ -29,14 +33,9 @@ function App() {
         body: JSON.stringify({ dna })
       });
       const data = await res.json();
-      if (data.imageUrl) {
-        setPfpUrl(data.imageUrl);
-      } else {
-        alert('Error: ' + data.error);
-      }
+      if (data.imageUrl) setPfpUrl(data.imageUrl);
     } catch (err) {
       console.error(err);
-      alert('Failed to connect to server');
     }
     setLoading(false);
   };
@@ -64,32 +63,21 @@ function App() {
           color: '#000',
           border: 'none',
           borderRadius: '20px',
-          margin: '30px',
-          cursor: loading ? 'not-allowed' : 'pointer',
-          opacity: loading ? 0.7 : 1
+          margin: '30px'
         }}
       >
-        {loading ? 'Generating Magic...' : 'Generate My PFP'}
+        {loading ? 'Generating...' : 'Generate My PFP'}
       </button>
 
       {pfpUrl && (
         <div style={{ marginTop: '40px' }}>
-          <h2>Your Unique DNA PFP:</h2>
+          <h2>Your Unique PFP:</h2>
           <img
             src={pfpUrl}
-            alt="Your DNA-based PFP"
-            style={{
-              width: '320px',
-              height: '320px',
-              borderRadius: '50%',
-              border: '6px solid #0ff',
-              boxShadow: '0 0 30px #0ff'
-            }}
+            alt="DNA PFP"
+            style={{ width: '320px', height: '320px', borderRadius: '50%', border: '5px solid #0ff' }}
           />
-          <p style={{ marginTop: '20px', fontSize: '18px' }}>
-            Right-click → Save image<br />
-            Use it as your Warpcast profile picture!
-          </p>
+          <p>Save & use as profile picture!</p>
         </div>
       )}
     </div>
