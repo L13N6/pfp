@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { sdk } from '@farcaster/miniapp-sdk';
-import { keccak256, stringToBytes } from 'viem';
-import { utf8 } from 'viem/encoding';
+import { keccak256, toBytes } from 'viem';
+import { toUtf8Bytes } from 'viem/utils'; // Correct import
 
 function App() {
   const [fid, setFid] = useState<number | null>(null);
@@ -10,15 +10,15 @@ function App() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Hide loading splash
     sdk.actions.ready();
 
-    // Get user from context (current SDK method)
-    if (sdk.context.user?.fid) {
-      const userFid = sdk.context.user.fid;
+    // Correct way: use sdk.context (it's synchronous after load)
+    const context = sdk.context;
+    if (context?.user?.fid) {
+      const userFid = context.user.fid;
       setFid(userFid);
-      const bytes = stringToBytes(utf8(userFid.toString()));
-      const hash = keccak256(bytes);
+      const bytes = toUtf8Bytes(userFid.toString());
+      const hash = keccak256(toBytes(bytes));
       setDna(hash);
     }
   }, []);
