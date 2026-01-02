@@ -2,107 +2,143 @@ import { useEffect, useState } from 'react';
 import { sdk } from '@farcaster/miniapp-sdk';
 import { keccak256, stringToBytes } from 'viem';
 
-/* ---------- helpers ---------- */
-const pick = (dna: string, i: number, arr: string[]) =>
-  arr[parseInt(dna.slice(i, i + 2), 16) % arr.length];
+/* ---------------- SVG GENERATOR ---------------- */
 
-/* ---------- SVG generator ---------- */
-function PlanetSVG({ dna }: { dna: string }) {
-  const colors = ['#6aa9ff', '#6aff9d', '#ffd36a', '#ff6a6a', '#b06aff', '#222'];
-  const mouths = ['_', 'o', '-', '~'];
-  const eyes = ['.', '•', 'o'];
-  const accessories = ['none', 'hat', 'smoke'];
+function generateFwogPlanetSVG(dna: string) {
+  const pick = (i: number, arr: string[]) =>
+    arr[parseInt(dna.slice(i, i + 2), 16) % arr.length];
 
-  const color = pick(dna, 2, colors);
-  const mouth = pick(dna, 6, mouths);
-  const eye = pick(dna, 8, eyes);
-  const accessory = pick(dna, 10, accessories);
-  const hasRing = parseInt(dna[12], 16) % 2 === 0;
+  const planetColors = ['#6aa9ff', '#6aff9d', '#ffd36a', '#ff6a6a', '#b06aff'];
+  const backgrounds = ['#f4f1ec', '#e6f7ff', '#fff0f6', '#f0fff4'];
+  const mouths = ['_', '-', 'o', '~'];
 
-  return (
-    <svg viewBox="0 0 200 200" width="200">
-      {/* aura */}
-      <circle cx="100" cy="100" r="78" fill={color} opacity="0.15" />
+  const planetColor = pick(0, planetColors);
+  const bg = pick(2, backgrounds);
+  const mouth = pick(4, mouths);
+  const hasRing = parseInt(dna[6], 16) % 2 === 0;
 
-      {/* ring */}
-      {hasRing && (
-        <ellipse
-          cx="100"
-          cy="115"
-          rx="90"
-          ry="22"
-          fill="none"
-          stroke="#000"
-          strokeWidth="6"
-          opacity="0.4"
-        />
-      )}
+  return `
+<svg viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+  <!-- background -->
+  <rect width="300" height="300" fill="${bg}" />
 
-      {/* planet */}
-      <circle
-        cx="100"
-        cy="100"
-        r="70"
-        fill={color}
-        stroke="#000"
-        strokeWidth="6"
-      />
+  <!-- fwog-style body -->
+  <rect x="110" y="120" rx="40" ry="40" width="80" height="100"
+        fill="#9bf6ff" stroke="#000" stroke-width="5"/>
 
-      {/* face */}
-      <text x="70" y="95" fontSize="18">{eye}</text>
-      <text x="120" y="95" fontSize="18">{eye}</text>
-      <text x="95" y="120" fontSize="18">{mouth}</text>
+  <!-- head -->
+  <circle cx="150" cy="90" r="45"
+          fill="#9bf6ff" stroke="#000" stroke-width="5"/>
 
-      {/* accessory */}
-      {accessory === 'hat' && (
-        <rect x="60" y="35" width="80" height="20" fill="#000" />
-      )}
+  <!-- remilio face -->
+  <circle cx="135" cy="85" r="3" fill="#000"/>
+  <circle cx="165" cy="85" r="3" fill="#000"/>
+  <text x="147" y="105" font-size="14" text-anchor="middle">${mouth}</text>
 
-      {accessory === 'smoke' && (
-        <text x="140" y="120" fontSize="20">~</text>
-      )}
-    </svg>
-  );
+  <!-- arm -->
+  <line x1="190" y1="150" x2="235" y2="165"
+        stroke="#000" stroke-width="6" stroke-linecap="round"/>
+
+  <!-- planet in hand -->
+  <circle cx="250" cy="170" r="22"
+          fill="${planetColor}" stroke="#000" stroke-width="4"/>
+
+  ${hasRing ? `
+    <ellipse cx="250" cy="175" rx="30" ry="10"
+             fill="none" stroke="#000" stroke-width="3"/>
+  ` : ''}
+
+</svg>
+`;
 }
+
+/* ---------------- APP ---------------- */
 
 function App() {
   const [fid, setFid] = useState<number | null>(null);
   const [dna, setDna] = useState<string | null>(null);
+  const [status, setStatus] = useState<string>('Idle');
 
+  // Detect Farcaster FID
+  const detectFid = async () => {
+    try {
+      setStatus('Detecting Farcaster...');
+      sdk.actions.ready();
+
+      const context = await sdk.context;
+      const user = context?.user;
+
+      if (!user?.fid) {
+        setStatus('No Farcaster context (open in Warpcast)');
+        return;
+      }
+
+      setFid(user.fid);
+      setStatus('FID detected');
+    } catch (e) {
+      console.error(e);
+      setStatus('Error detecting FID');
+    }
+  };
+
+  // Auto-detect on load
   useEffect(() => {
-    const init = async () => {
-      try {
-        sdk.actions.ready();
-        const context = await sdk.context;
-        if (context?.user?.fid) {
-          setFid(context.user.fid);
-        }
-      } catch {}
-    };
-    init();
+    detectFid();
   }, []);
 
-  const generate = () => {
+  // Generate DNA from FID
+  const generatePlanet = () => {
     if (!fid) return;
     const hash = keccak256(stringToBytes(fid.toString()));
     setDna(hash);
+    setStatus('Planet generated');
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#05010f', color: '#fff', padding: 32 }}>
+    <div style={{
+      minHeight: '100vh',
+      background: '#05010f',
+      color: '#fff',
+      fontFamily: 'monospace',
+      padding: 24,
+      textAlign: 'center'
+    }}>
       <h1>🪐 ZETA PLANETS</h1>
+      <p>{status}</p>
 
-      {!fid && <p>Open inside Farcaster</p>}
+      {!fid && (
+        <button onClick={detectFid}>
+          Detect Farcaster FID
+        </button>
+      )}
 
       {fid && !dna && (
-        <button onClick={generate}>Generate My Planet</button>
+        <>
+          <p>FID: {fid}</p>
+          <button onClick={generatePlanet}>
+            Generate My Planet
+          </button>
+        </>
       )}
 
       {dna && (
         <>
-          <PlanetSVG dna={dna} />
-          <pre style={{ fontSize: 10 }}>{dna}</pre>
-          <button>Mint (soon)</button>
+          <div
+            style={{ margin: '20px auto', width: 300 }}
+            dangerouslySetInnerHTML={{
+              __html: generateFwogPlanetSVG(dna),
+            }}
+          />
+          <pre style={{
+            fontSize: 10,
+            opacity: 0.7,
+            wordBreak: 'break-all'
+          }}>
+            {dna}
+          </pre>
+          <button>
+            Mint (coming soon)
+          </button>
         </>
       )}
     </div>
