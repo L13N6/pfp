@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { sdk } from '@farcaster/miniapp-sdk';
-import { keccak256, toBytes } from 'viem';
-import { toUtf8Bytes } from 'viem/utils'; // Correct import
+import { keccak256, stringToBytes } from 'viem';
 
 function App() {
   const [fid, setFid] = useState<number | null>(null);
@@ -10,15 +9,14 @@ function App() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    sdk.actions.ready();
+    sdk.actions.ready();  // Hide splash
 
-    // Correct way: use sdk.context (it's synchronous after load)
-    const context = sdk.context;
-    if (context?.user?.fid) {
-      const userFid = context.user.fid;
-      setFid(userFid);
-      const bytes = toUtf8Bytes(userFid.toString());
-      const hash = keccak256(toBytes(bytes));
+    // Current SDK: sdk.context is synchronous object
+    const user = sdk.context?.user;
+    if (user?.fid) {
+      setFid(user.fid);
+      const bytes = stringToBytes(user.fid.toString());
+      const hash = keccak256(bytes);
       setDna(hash);
     }
   }, []);
@@ -27,7 +25,7 @@ function App() {
     if (!dna) return;
     setLoading(true);
     try {
-      const res = await fetch('/generate-pfp', {
+      const res = await fetch('/generate-pfp', {  // Proxied to your server
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dna })
