@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Farcaster DNA PFP Generator</title>
+    
+    <!-- Farcaster Mini App Meta Tags (Required) -->
+    <meta property="fc:frame" content="vNext" />
+    <meta property="fc:frame:image" content="https://i.imgur.com/0Z9fO.jpg" /> <!-- Placeholder preview image -->
+    <meta property="fc:frame:button:1" content="Generate PFP" />
+    <meta property="fc:frame:button:1:action" content="post" />
+    <meta property="fc:frame:post_url" content="{{url}}" /> <!-- Your full URL will be injected -->
+    
+    <!-- Optional: Better preview -->
+    <meta property="og:title" content="DNA PFP Generator" />
+    <meta property="og:description" content="Generate unique PFP from your Farcaster FID DNA" />
+    <meta property="og:image" content="https://i.imgur.com/0Z9fO.jpg" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
